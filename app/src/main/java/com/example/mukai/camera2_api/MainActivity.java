@@ -100,6 +100,7 @@ public class MainActivity extends Activity implements SensorEventListener {
                     mCaptureSession.stopRepeating(); // プレビューの更新を止める
                     if(mTextureView.isAvailable()) {
 
+
                         /*
                         filePath = Environment.getExternalStorageDirectory().getPath()
                                 + "DCIM/Camera2_api/"+"pic.jpg";

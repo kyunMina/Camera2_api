@@ -7,6 +7,7 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
+
     <TextureView
         android:id="@+id/texture"
         android:layout_width="fill_parent"
