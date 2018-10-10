@@ -2,9 +2,16 @@ package com.example.mukai.camera2_api;
 
 //import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.SurfaceTexture;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
@@ -12,35 +19,54 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
+
+import static java.lang.Math.abs;
 
 
 //@TargetApi(Build.VERSION_CODES.LOLLIPOP)
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SensorEventListener {
 
     private CameraDevice mCameraDevice;
     private TextureView mTextureView;
     private Handler mBackgroundHandler = new Handler();
     private CameraCaptureSession mCaptureSession = null;
 
+    private String filePath;
+    private TextView textView_X;
+
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
+
+    //  Sensor
+    private SensorManager sensorManager;
 
     //@TargetApi(Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        textView_X = findViewById(R.id.text_view_X);
+
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         mTextureView = (TextureView) findViewById(R.id.texture);
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -73,19 +99,42 @@ public class MainActivity extends Activity {
                 try {
                     mCaptureSession.stopRepeating(); // プレビューの更新を止める
                     if(mTextureView.isAvailable()) {
-                        File file = new File(getFilesDir(), "surface_text.jpg");
+
+                        /*
+                        filePath = Environment.getExternalStorageDirectory().getPath()
+                                + "DCIM/Camera2_api/"+"pic.jpg";
+                        File file = new File(filePath);
+                        file.getParentFile().mkdir();
+
                         FileOutputStream fos = new FileOutputStream(file);
                         Bitmap bitmap = mTextureView.getBitmap();
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                        fos.close();
+                        */
+                        filePath = getExternalFilesDir(null).getPath();
+                        File file = new File(filePath);
+
+                        FileOutputStream fos = null;
+                        fos = new FileOutputStream(new File(file,"test_pic.jpg"));
+                        Bitmap bitmap = mTextureView.getBitmap();
+                        bitmap.compress(Bitmap.CompressFormat.JPEG,100,fos);
+
                         fos.close();
                     }
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
+
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
+                //  save index
+                ContentValues values = new ContentValues();
+                ContentResolver contentResolver = getContentResolver();
+                values.put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg");
+                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
             }
         });
     }
@@ -134,7 +183,7 @@ public class MainActivity extends Activity {
 
     private void createCameraPreviewSession() {
         SurfaceTexture texture = mTextureView.getSurfaceTexture();
-        texture.setDefaultBufferSize(1280, 640); // 自分の手元のデバイスで決めうちしてます
+        texture.setDefaultBufferSize(3492, 4656); // 自分の手元のデバイスで決めうちしてます
         Surface surface = new Surface(texture);
 
         try {
@@ -171,5 +220,80 @@ public class MainActivity extends Activity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public void saveBitmap(Bitmap bitmap) {
+
+        try {
+
+        } catch (Exception e) {
+
+        }
+    }
+    //  解除コード
+    @Override
+    protected void onResume(){
+        super.onResume();
+        //  Listenerの登録
+        Sensor gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        Sensor gyro_uc = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
+
+        if (gyro != null){
+            sensorManager.registerListener(this,gyro,SensorManager.SENSOR_DELAY_UI);
+            sensorManager.registerListener(this,gyro_uc,SensorManager.SENSOR_DELAY_UI);
+        }
+        else{
+            String ns = "No Support!";
+            sensorManager.unregisterListener(this);
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event){
+//        Log.d("debug","onSensorChanged");
+
+//        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
+//            float sensorX = event.values[0];
+//            float sensorY = event.values[1];
+//            float sensorZ = event.values[2];
+//
+//            //  X軸
+//            if (abs(sensorX) > 2.0){
+//                textView_X.setTextColor(Color.RED);
+//            }
+//            else textView_X.setTextColor(Color.BLUE);
+//
+//            String strTmp_X = String.format(Locale.US,"Gyroscope[rad/s]\n"
+//                    + " X: " + sensorX);
+//
+//            textView_X.setText(strTmp_X);
+//
+//            if (abs(sensorX) > 2.0){
+//                try {
+//                    mCaptureSession.stopRepeating(); // プレビューの更新を止める
+//                    if(mTextureView.isAvailable()) {
+//                        File file = new File(getFilesDir(), "surface_text.jpg");
+//                        FileOutputStream fos = new FileOutputStream(file);
+//                        //Bitmap bitmap = mTextureView.getBitmap();
+//                        //bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
+//                        fos.close();
+//                    }
+//                } catch (CameraAccessException e) {
+//                    e.printStackTrace();
+//                } catch (FileNotFoundException e) {
+//                    e.printStackTrace();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//            else{
+//
+//            }
+//        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy){
+
     }
 }
