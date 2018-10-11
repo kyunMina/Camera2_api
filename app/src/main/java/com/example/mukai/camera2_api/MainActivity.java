@@ -19,6 +19,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
@@ -51,6 +52,9 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private String filePath;
     private TextView textView_X;
+    private TextView TimerText;
+
+    private SimpleDateFormat TimerFormat = new SimpleDateFormat("mm:ss.SSS", Locale.US);
 
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
@@ -65,8 +69,16 @@ public class MainActivity extends Activity implements SensorEventListener {
         setContentView(R.layout.activity_main);
 
         textView_X = findViewById(R.id.text_view_X);
+        TimerText = findViewById(R.id.Timer_text);
+        TimerText.setText(TimerFormat.format(0));
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        //  10sec = 10 * 1000 = 10000msec
+        long countNumber = 10000;
+        //  interval 10msec
+        long interval = 10;
+        final CountDown countDown = new CountDown(countNumber, interval);
 
         mTextureView = (TextureView) findViewById(R.id.texture);
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -96,46 +108,10 @@ public class MainActivity extends Activity implements SensorEventListener {
         capture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    mCaptureSession.stopRepeating(); // プレビューの更新を止める
-                    if(mTextureView.isAvailable()) {
 
+                countDown.start();
+                //saveBitmap();
 
-                        /*
-                        filePath = Environment.getExternalStorageDirectory().getPath()
-                                + "DCIM/Camera2_api/"+"pic.jpg";
-                        File file = new File(filePath);
-                        file.getParentFile().mkdir();
-
-                        FileOutputStream fos = new FileOutputStream(file);
-                        Bitmap bitmap = mTextureView.getBitmap();
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-                        fos.close();
-                        */
-                        filePath = getExternalFilesDir(null).getPath();
-                        File file = new File(filePath);
-
-                        FileOutputStream fos = null;
-                        fos = new FileOutputStream(new File(file,"test_pic.jpg"));
-                        Bitmap bitmap = mTextureView.getBitmap();
-                        bitmap.compress(Bitmap.CompressFormat.JPEG,100,fos);
-
-                        fos.close();
-                    }
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                //  save index
-                ContentValues values = new ContentValues();
-                ContentResolver contentResolver = getContentResolver();
-                values.put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg");
-                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
             }
         });
     }
@@ -223,14 +199,74 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
     }
 
-    public void saveBitmap(Bitmap bitmap) {
+    //  画像保存
+    public void saveBitmap() {
+
+        //  タイマー開始
+
 
         try {
+            mCaptureSession.stopRepeating(); // プレビューの更新を止める
+            if(mTextureView.isAvailable()) {
 
-        } catch (Exception e) {
+                filePath = getExternalFilesDir(null).getPath();
+                File file = new File(filePath);
+                Date mDate = new Date();
+                SimpleDateFormat filename = new SimpleDateFormat("yyyyMMddHHmmss");
+
+                FileOutputStream fos = null;
+                fos = new FileOutputStream(new File(file,filename.format(mDate) + ".jpg"));
+                Bitmap bitmap = mTextureView.getBitmap();
+                bitmap.compress(Bitmap.CompressFormat.JPEG,100,fos);
+
+                fos.close();
+            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //  save index
+        ContentValues values = new ContentValues();
+        ContentResolver contentResolver = getContentResolver();
+        values.put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg");
+        contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+
+    }
+
+    //  タイマー
+    public void Timer(){
+
+    }
+
+    class CountDown extends CountDownTimer{
+
+        CountDown(long millisInFuture, long countDownInterval){
+            super(millisInFuture,countDownInterval);
+        }
+
+        //  完了時呼ばれる
+        @Override
+        public void onFinish(){
+
+            TimerText.setText(TimerFormat.format(0));
+            saveBitmap();
+
+        }
+
+        //  インターバルで呼ばれる
+        @Override
+        public void onTick(long millisUntilFinished){
+
+            TimerText.setText(TimerFormat.format(millisUntilFinished));
 
         }
     }
+
     //  解除コード
     @Override
     protected void onResume(){
