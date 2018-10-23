@@ -23,6 +23,7 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
@@ -55,6 +56,11 @@ public class MainActivity extends Activity implements SensorEventListener {
     private TextView TimerText;
 
     private SimpleDateFormat TimerFormat = new SimpleDateFormat("mm:ss.SSS", Locale.US);
+    //  10sec = 10 * 1000 = 10000msec
+    final long countNumber = 10000;
+    //  interval 10msec
+    final long interval = 10;
+    final CountDown countDown = new CountDown(countNumber, interval);
 
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
@@ -74,11 +80,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
-        //  10sec = 10 * 1000 = 10000msec
-        long countNumber = 10000;
-        //  interval 10msec
-        long interval = 10;
-        final CountDown countDown = new CountDown(countNumber, interval);
+
 
         mTextureView = (TextureView) findViewById(R.id.texture);
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -110,7 +112,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             public void onClick(View v) {
 
                 countDown.start();
-                //saveBitmap();
 
             }
         });
@@ -120,6 +121,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         String selectedCameraId = "";
         try {
+
             selectedCameraId = manager.getCameraIdList()[0];
 
             // https://github.com/googlesamples/android-Camera2Basic/blob/5dad16c103715b5e7e3c001cc5f6067f8d23f29e/Application/src/main/java/com/example/android/camera2basic/Camera2BasicFragment.java#L499
@@ -202,9 +204,6 @@ public class MainActivity extends Activity implements SensorEventListener {
     //  画像保存
     public void saveBitmap() {
 
-        //  タイマー開始
-
-
         try {
             mCaptureSession.stopRepeating(); // プレビューの更新を止める
             if(mTextureView.isAvailable()) {
@@ -238,16 +237,13 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     }
 
-    //  タイマー
-    public void Timer(){
-
-    }
-
     class CountDown extends CountDownTimer{
 
         CountDown(long millisInFuture, long countDownInterval){
             super(millisInFuture,countDownInterval);
         }
+
+
 
         //  完了時呼ばれる
         @Override
@@ -265,6 +261,12 @@ public class MainActivity extends Activity implements SensorEventListener {
             TimerText.setText(TimerFormat.format(millisUntilFinished));
 
         }
+    }
+
+    //  センサー停止
+    protected void stop_sensor(){
+        sensorManager.unregisterListener(this);
+        countDown.start();
     }
 
     //  解除コード
@@ -287,14 +289,14 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event){
-//        Log.d("debug","onSensorChanged");
+        Log.d("debug","onSensorChanged");
 
-//        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
-//            float sensorX = event.values[0];
-//            float sensorY = event.values[1];
-//            float sensorZ = event.values[2];
-//
-//            //  X軸
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
+            float sensorX = event.values[0];
+            float sensorY = event.values[1];
+            float sensorZ = event.values[2];
+
+            //  X軸
 //            if (abs(sensorX) > 2.0){
 //                textView_X.setTextColor(Color.RED);
 //            }
@@ -304,29 +306,18 @@ public class MainActivity extends Activity implements SensorEventListener {
 //                    + " X: " + sensorX);
 //
 //            textView_X.setText(strTmp_X);
-//
-//            if (abs(sensorX) > 2.0){
-//                try {
-//                    mCaptureSession.stopRepeating(); // プレビューの更新を止める
-//                    if(mTextureView.isAvailable()) {
-//                        File file = new File(getFilesDir(), "surface_text.jpg");
-//                        FileOutputStream fos = new FileOutputStream(file);
-//                        //Bitmap bitmap = mTextureView.getBitmap();
-//                        //bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
-//                        fos.close();
-//                    }
-//                } catch (CameraAccessException e) {
-//                    e.printStackTrace();
-//                } catch (FileNotFoundException e) {
-//                    e.printStackTrace();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
+
+//            if (abs(sensorX) > 2.0 && abs(sensorY) > 2.0 && abs(sensorZ) > 2.0){
+//                stop_sensor();
 //            }
-//            else{
-//
-//            }
-//        }
+
+            if (abs(sensorX) < 0.5 && abs(sensorY) < 0.5 && abs(sensorZ) < 0.5){
+                stop_sensor();
+            }
+
+
+
+        }
     }
 
     @Override
